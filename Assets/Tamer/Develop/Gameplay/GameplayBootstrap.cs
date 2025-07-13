@@ -1,50 +1,66 @@
-﻿using System;
+﻿using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
+using Tamer.Develop.Features.SpringFeature;
 using UnityEngine;
 
 namespace Tamer.Develop.Gameplay
 {
     public class GameplayBootstrap : MonoBehaviour
     {
-        private DependOn _dependOn;
-        private GameplayEntity _gameplayEntityPrefab;
+        [SerializeField] private SpringConnection _springConnectionPrefab;
 
-        private void Awake()
+        [SerializeField] private Rigidbody _connectionParent;
+
+        private Cube _cubePrefab;
+
+        private GhostCube _ghostCubePrefab;
+
+        private List<GhostCube> _ghostCubes = new();
+
+        private GhostCube _chosenGhostCube;
+
+        private async void Awake()
         {
-            _dependOn = new DependOn(1);
-            var gameplayEntity = Instantiate(_gameplayEntityPrefab);
-            gameplayEntity.Initialize(Yap);
+            // var springConnection = Instantiate(_springConnectionPrefab);
+            // springConnection.Connect(_connectionParent);
+
+            _cubePrefab = Resources.Load<Cube>("Cube");
+            _ghostCubePrefab = Resources.Load<GhostCube>("GhostCube");
+
+            var cube = Instantiate(_cubePrefab);
+
+            // Instantiate(_ghostCubePrefab, cube.GhostCubes[Random.Range(0,cube.GhostCubes.Count)].position, Quaternion.identity, null);
+
+            _chosenGhostCube = await Generate(cube);
         }
 
-        private bool Yap(bool reg1, bool reg2)
+        private async UniTask<GhostCube> Generate(Cube cube)
         {
-            return reg1 && reg2;
-        }
-    }
+            foreach (var cubeSpawnPoint in cube.GhostCubes)
+            {
+                var ghostCube = Instantiate(_ghostCubePrefab, cubeSpawnPoint.position, Quaternion.identity, null);
 
-    public class GameplayEntity : MonoBehaviour
-    {
-        private DependOn _dependOn;
+                ghostCube.gameObject.SetActive(false);
 
-        public void Initialize(Func<bool,bool,bool> t)
-        {
-            t.Invoke(true,true);
-        }
+                _ghostCubes.Add(ghostCube);
+            }
 
-        private void Start()
-        {
-            Debug.Log(_dependOn.Dependency);
-        }
-    }
+            await UniTask.WaitForSeconds(1);
 
-    public class DependOn
-    {
-        private readonly int _dependency;
+            var chosenCube = _ghostCubes[Random.Range(0, _ghostCubes.Count)];
 
-        public DependOn(int dependency)
-        {
-            _dependency = dependency;
+            chosenCube.gameObject.SetActive(true);
+
+            return chosenCube;
         }
 
-        public int Dependency => _dependency;
+        private void Update()
+        {
+            // if (Input.GetMouseButtonDown(0))
+            // {
+            //     var created = Instantiate(_cubePrefab,_chosenGhostCube.transform.position, Quaternion.identity, null);
+            //     Destroy(_chosenGhostCube.gameObject);
+            // }
+        }
     }
 }
